@@ -48,6 +48,10 @@ def verify_models():
             else:
                 print("  ! No models found in Ollama.")
                 sys.exit(1)
+    except Exception as e:
+        print(f"[Ollama Error] Connection failed: {e}")
+        print("Start Ollama in a terminal with: ollama serve")
+        sys.exit(1)
 
 
 def browser_worker(platform, target_user, cmd_queue, stop_event):
