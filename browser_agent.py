@@ -6,6 +6,7 @@ Disables Ollama thinking mode for 1.5s responses and supports live directive exe
 
 import re
 import time
+import random
 import requests
 import config
 from adapters.instagram import InstagramAdapter
@@ -58,13 +59,10 @@ class BrowserSubagent:
         print(f"[Subagent Ready] Active on: {self.adapter.get_chat_title()} ({len(self.conversation_memory)} msgs in context)")
 
     def _update_memory(self, dom_messages: list):
-        """Merges visible DOM messages into rolling session memory (up to 15 messages)."""
-        for msg in dom_messages[-15:]:
-            if not self.conversation_memory or self.conversation_memory[-1]["text"] != msg["text"]:
-                # Avoid consecutive duplicates
-                if not any(m["text"] == msg["text"] and m["is_me"] == msg["is_me"] for m in self.conversation_memory[-3:]):
-                    self.conversation_memory.append(msg)
-        self.conversation_memory = self.conversation_memory[-15:]
+        """Keeps rolling conversation memory synchronized with visible chat history."""
+        if not dom_messages:
+            return
+        self.conversation_memory = list(dom_messages[-15:])
 
     def trigger_new_directive(self, reset_memory=False):
         """Called when the user types a new instruction or switches target in the live panel."""
@@ -124,7 +122,7 @@ class BrowserSubagent:
         system_prompt = f"""You are the senior decision supervisor for Prashith.
 Active Goal: "{active_goal}".
 Task:
-- Provide ONLY the single short reply line Prashith should send.
+- Provide 1 to 2 short burst lines Prashith should send (separated by newlines). Never write a paragraph.
 - Maintain continuity with the conversation history. Do not repeat questions already asked.
 - Defuse tension, be natural, no AI mentions, stiff focus on the goal.
 """
@@ -148,7 +146,8 @@ Task:
         system_prompt = (
             f"{config.get_persona_prompt()}\n"
             f"Goal: {active_goal}\n"
-            "Continuity: Remember the conversation history below. Never repeat greetings or questions you already asked."
+            "Continuity: Remember the conversation history below. Never repeat greetings or questions you already asked.\n"
+            "Cadence: Burst texting. Send 1 to 3 short rapid lines separated by newlines (double or triple text). Max 6 words per line. Never send paragraphs."
         )
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -159,7 +158,7 @@ Task:
         if is_initiation:
             messages.append({
                 "role": "user",
-                "content": f"[System Directive: Send a short, natural message right now to fulfill this goal: '{active_goal}'. Output ONLY the message text.]"
+                "content": f"[System Directive: Send a natural burst message (1 to 3 short lines separated by newlines) right now to fulfill this goal: '{active_goal}'. Output ONLY the raw lines.]"
             })
 
         try:
@@ -170,16 +169,42 @@ Task:
             print(f"[Subagent Error] Generation failed: {e}")
             return None
 
-    def dispatch_send(self, text: str) -> bool:
-        """Sends message and records it in sent_messages and conversation_memory."""
-        clean = text.strip()
-        self.sent_messages.add(clean.lower())
-        success = self.adapter.send_message(clean)
-        if success:
-            self.conversation_memory.append({"text": clean, "is_me": True})
-            self.conversation_memory = self.conversation_memory[-15:]
-            print(f"[Subagent Action] Sent and delivered: \"{clean}\"")
-        return success
+    def dispatch_send(self, text_or_lines: str) -> bool:
+        """Sends 1 to 3 burst messages with natural human pauses (double/triple texting)."""
+        if not text_or_lines:
+            return False
+
+        # Split into individual burst lines
+        raw_lines = [l.strip() for l in text_or_lines.splitlines() if l.strip()]
+        clean_lines = []
+        for l in raw_lines:
+            if (l.startswith('"') and l.endswith('"')) or (l.startswith("'") and l.endswith("'")):
+                l = l[1:-1].strip()
+            if l:
+                clean_lines.append(l)
+
+        # Cap burst at max 3 lines to prevent runaway output
+        clean_lines = clean_lines[:3]
+        if not clean_lines:
+            return False
+
+        any_sent = False
+        total = len(clean_lines)
+        for idx, line in enumerate(clean_lines):
+            self.sent_messages.add(line.lower())
+            success = self.adapter.send_message(line)
+            if success:
+                any_sent = True
+                self.conversation_memory.append({"text": line, "is_me": True})
+                self.conversation_memory = self.conversation_memory[-15:]
+                burst_label = f" ({idx + 1}/{total})" if total > 1 else ""
+                print(f"[Subagent Action] Sent and delivered{burst_label}: \"{line}\"")
+
+            # Rapid human typing delay between double or triple texts (0.7s - 1.3s)
+            if idx < total - 1:
+                time.sleep(random.uniform(0.7, 1.3))
+
+        return any_sent
 
     def run_cycle(self):
         if not self.adapter or not self.adapter.is_chat_open():
@@ -212,6 +237,7 @@ Task:
         # 3. Reactive reply: Handle genuine incoming messages from the contact
         if latest_text != self.last_seen_message:
             self.last_seen_message = latest_text
+            self.sent_messages.clear()
             chat_name = self.adapter.get_chat_title()
             print(f"\n[{chat_name}] Incoming message: \"{latest_text}\"")
 

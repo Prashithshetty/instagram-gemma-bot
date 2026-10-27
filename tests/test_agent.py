@@ -110,9 +110,65 @@ def test_directive_retrigger():
     print("✓ Live directive re-trigger tests passed!")
 
 
+def test_burst_dispatch():
+    sent_log = []
+
+    class MockAdapter:
+        def send_message(self, text):
+            sent_log.append(text)
+            return True
+
+    class DummySubagent(BrowserSubagent):
+        def __init__(self):
+            self.adapter = MockAdapter()
+            self.sent_messages = set()
+            self.conversation_memory = []
+
+    sub = DummySubagent()
+
+    # Case 1: Triple-text response
+    triple_text = "fr fr\nit's actually cooked\ndw u got this"
+    success = sub.dispatch_send(triple_text)
+    assert success is True
+    assert sent_log == ["fr fr", "it's actually cooked", "dw u got this"]
+    assert len(sub.conversation_memory) == 3
+    assert sub.conversation_memory[0] == {"text": "fr fr", "is_me": True}
+    assert sub.conversation_memory[2] == {"text": "dw u got this", "is_me": True}
+
+    # Case 2: Cap at 3 messages even if model outputs 5
+    sent_log.clear()
+    sub.dispatch_send("line 1\nline 2\nline 3\nline 4\nline 5")
+    assert sent_log == ["line 1", "line 2", "line 3"]
+
+    print("✓ Burst double/triple text dispatch tests passed!")
+
+
+def test_memory_sync():
+    class DummySubagent(BrowserSubagent):
+        def __init__(self):
+            self.conversation_memory = []
+
+    sub = DummySubagent()
+    dom_msgs = [{"text": f"msg_{i}", "is_me": False} for i in range(20)]
+    sub._update_memory(dom_msgs)
+
+    # Must keep at most 15 messages without duplication loop
+    assert len(sub.conversation_memory) == 15
+    assert sub.conversation_memory[0]["text"] == "msg_5"
+    assert sub.conversation_memory[-1]["text"] == "msg_19"
+
+    # Repeated sync calls with identical DOM messages must NOT duplicate entries
+    sub._update_memory(dom_msgs)
+    assert len(sub.conversation_memory) == 15
+
+    print("✓ Rolling memory synchronization tests passed!")
+
+
 if __name__ == "__main__":
     test_doubt_detection()
     test_geometric_alignment()
     test_url_cache_serialization()
     test_directive_retrigger()
+    test_burst_dispatch()
+    test_memory_sync()
     print("\nAll unit tests passed successfully!")
