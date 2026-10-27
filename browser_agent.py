@@ -95,7 +95,8 @@ class BrowserSubagent:
                 "think": False,  # Disables slow <think> chains on gemma4:12b (1.5s vs 90s+)
                 "options": {
                     "temperature": config.TEMPERATURE,
-                    "top_p": 0.8,
+                    "top_p": 0.9,
+                    "repeat_penalty": 1.25,
                     "num_predict": 60,
                     "num_ctx": 2048
                 }
@@ -145,9 +146,11 @@ Task:
         active_goal = config.get_active_instruction()
         system_prompt = (
             f"{config.get_persona_prompt()}\n"
-            f"Goal: {active_goal}\n"
-            "Continuity: Remember the conversation history below. Never repeat greetings or questions you already asked.\n"
-            "Cadence: Dynamic burst texting. Depending on context, naturally send 1, 2, 3, or 4 rapid short lines separated by newlines (double/triple text or burst). Max 5 words per line. NEVER send paragraphs."
+            f"Active Goal / Tone Directive: {active_goal}\n"
+            "Rules:\n"
+            "- Reply directly to the exact message they just sent.\n"
+            "- Never repeat lines you already sent in the conversation history.\n"
+            "- Send 1 to 3 short burst lines separated by newlines (2 to 7 words per line). Never send paragraphs."
         )
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -158,7 +161,7 @@ Task:
         if is_initiation:
             messages.append({
                 "role": "user",
-                "content": f"[System Directive: Send a natural burst message (1 to 4 short lines separated by newlines depending on context) right now to fulfill this goal: '{active_goal}'. Output ONLY the raw lines.]"
+                "content": f"[System Directive: Send a natural burst message (1 to 3 short lines separated by newlines) right now matching this tone/goal: '{active_goal}'. Output ONLY the raw lines.]"
             })
 
         try:
@@ -174,14 +177,8 @@ Task:
         if not text_or_lines:
             return False
 
-        # Split into individual burst lines
-        raw_lines = [l.strip() for l in text_or_lines.splitlines() if l.strip()]
-        clean_lines = []
-        for l in raw_lines:
-            if (l.startswith('"') and l.endswith('"')) or (l.startswith("'") and l.endswith("'")):
-                l = l[1:-1].strip()
-            if l:
-                clean_lines.append(l)
+        # Split into individual burst lines and strip stray quotes
+        clean_lines = [l.strip('"\' ') for l in text_or_lines.splitlines() if l.strip('"\' ')]
 
         # Cap burst at max 4 lines to prevent runaway output
         clean_lines = clean_lines[:4]

@@ -15,7 +15,7 @@ Supports automated chatting, context memory, and live interactive supervision fo
 - **Self-Reply & Echo Protection:** Keeps in-memory sent history and geometric checks to ensure the bot never replies to its own messages.
 - **Thread URL Caching:** Discovers Instagram contacts via the Direct inbox and caches direct thread IDs (`/direct/t/<id>/`) locally for instant navigation on subsequent launches.
 - **Rolling Context Memory:** Retains the last 15 conversation exchanges in a rolling sliding window to maintain natural continuity across turns.
-- **Custom Slang & Tone Injection:** Feed real chat examples into `persona_examples.txt` to make the bot talk, curse, and text exactly like you without fine-tuning.
+- **Tone-Driven Persona Engine:** Uses a behavioral tone profile with repeat penalties (`repeat_penalty: 1.25`) and dynamic burst cadence (1–4 rapid bubbles) so replies adapt directly to context without parroting canned sentences.
 - **Live Interactive Terminal Panel:** Update instructions on the fly (`[You -> Head Agent] > ...`), switch active contacts (`/target <username>`), or check status (`/status`) without restarting.
 
 ---

@@ -15,7 +15,6 @@ bot.log
 # Local Runtime User Data (ignore personal chat URLs and directives)
 instructions.txt
 instagram_chats.json
-persona_examples.txt
 
 # System & IDE
 .DS_Store
