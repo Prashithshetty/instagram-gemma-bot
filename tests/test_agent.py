@@ -135,12 +135,20 @@ def test_burst_dispatch():
     assert sub.conversation_memory[0] == {"text": "fr fr", "is_me": True}
     assert sub.conversation_memory[2] == {"text": "dw u got this", "is_me": True}
 
-    # Case 2: Cap at 3 messages even if model outputs 5
+    # Case 2: 4-burst response
     sent_log.clear()
-    sub.dispatch_send("line 1\nline 2\nline 3\nline 4\nline 5")
-    assert sent_log == ["line 1", "line 2", "line 3"]
+    quad_text = "once u guys get placed huge party\nand ill be drunk\nand dead\nass"
+    success = sub.dispatch_send(quad_text)
+    assert success is True
+    assert len(sent_log) == 4
+    assert sent_log[3] == "ass"
 
-    print("✓ Burst double/triple text dispatch tests passed!")
+    # Case 3: Cap at 4 messages even if model outputs 6
+    sent_log.clear()
+    sub.dispatch_send("line 1\nline 2\nline 3\nline 4\nline 5\nline 6")
+    assert sent_log == ["line 1", "line 2", "line 3", "line 4"]
+
+    print("✓ Burst dynamic (1/2/3/4 lines) dispatch tests passed!")
 
 
 def test_memory_sync():

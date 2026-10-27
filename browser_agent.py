@@ -147,7 +147,7 @@ Task:
             f"{config.get_persona_prompt()}\n"
             f"Goal: {active_goal}\n"
             "Continuity: Remember the conversation history below. Never repeat greetings or questions you already asked.\n"
-            "Cadence: Burst texting. Send 1 to 3 short rapid lines separated by newlines (double or triple text). Max 6 words per line. Never send paragraphs."
+            "Cadence: Dynamic burst texting. Depending on context, naturally send 1, 2, 3, or 4 rapid short lines separated by newlines (double/triple text or burst). Max 5 words per line. NEVER send paragraphs."
         )
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -158,7 +158,7 @@ Task:
         if is_initiation:
             messages.append({
                 "role": "user",
-                "content": f"[System Directive: Send a natural burst message (1 to 3 short lines separated by newlines) right now to fulfill this goal: '{active_goal}'. Output ONLY the raw lines.]"
+                "content": f"[System Directive: Send a natural burst message (1 to 4 short lines separated by newlines depending on context) right now to fulfill this goal: '{active_goal}'. Output ONLY the raw lines.]"
             })
 
         try:
@@ -170,7 +170,7 @@ Task:
             return None
 
     def dispatch_send(self, text_or_lines: str) -> bool:
-        """Sends 1 to 3 burst messages with natural human pauses (double/triple texting)."""
+        """Sends 1 to 4 burst messages with natural human pauses (double/triple/burst texting)."""
         if not text_or_lines:
             return False
 
@@ -183,8 +183,8 @@ Task:
             if l:
                 clean_lines.append(l)
 
-        # Cap burst at max 3 lines to prevent runaway output
-        clean_lines = clean_lines[:3]
+        # Cap burst at max 4 lines to prevent runaway output
+        clean_lines = clean_lines[:4]
         if not clean_lines:
             return False
 
@@ -215,7 +215,7 @@ Task:
         # 1. Proactive initiation or new user directive when it's our turn to speak
         if not self.has_initiated:
             goal = config.get_active_instruction()
-            if goal and "casual" not in goal.lower():
+            if goal and goal != config.DEFAULT_INSTRUCTION:
                 print(f"[Subagent Action] Executing goal: \"{goal}\"")
                 opening_text = self.generate_reply(messages, is_initiation=True)
                 if opening_text:
@@ -252,4 +252,5 @@ Task:
 
             if reply_text:
                 time.sleep(1.0)
-                self.dispatch_send(reply_text)
+                if self.dispatch_send(reply_text):
+                    self.has_initiated = True

@@ -84,26 +84,23 @@ class WhatsAppAdapter(BasePlatformAdapter):
             return []
 
         # Uses geometry: Outgoing messages on WhatsApp are strictly on the right side of #main.
-        # Broad selector catches messages with or without timestamp data-pre-plain-text attributes.
         script = """() => {
             const messages = [];
             const main = document.querySelector('#main');
             if (!main) return [];
 
             const mainRect = main.getBoundingClientRect();
-            const bubbles = Array.from(main.querySelectorAll('.copyable-text, [data-testid="msg-container"]'));
-            const seenTexts = new Set();
+            const bubbles = Array.from(main.querySelectorAll('div.copyable-text'));
 
             bubbles.forEach(el => {
                 const textSpan = el.querySelector('span.selectable-text');
                 if (!textSpan) return;
                 const text = textSpan.innerText.trim();
-                if (!text || seenTexts.has(text) || /^\\d{1,2}:\\d{2}\\s?(AM|PM)?$/i.test(text)) return;
+                if (!text || /^\\d{1,2}:\\d{2}\\s?(AM|PM)?$/i.test(text)) return;
 
                 const rect = el.getBoundingClientRect();
                 const isRightAligned = (rect.left + rect.width / 2) > (mainRect.left + mainRect.width / 2);
 
-                seenTexts.add(text);
                 messages.push({
                     text: text,
                     is_me: isRightAligned
@@ -126,6 +123,8 @@ class WhatsAppAdapter(BasePlatformAdapter):
             textbox = self.page.locator('#main footer div[contenteditable="true"]').first
             textbox.click(timeout=3000)
             time.sleep(0.2)
+            self.page.keyboard.press("Control+A")
+            self.page.keyboard.press("Backspace")
             self.page.keyboard.insert_text(text)
             time.sleep(0.2)
             self.page.keyboard.press("Enter")
