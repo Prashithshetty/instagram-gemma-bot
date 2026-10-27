@@ -21,3 +21,6 @@ persona_examples.txt
 .DS_Store
 .idea/
 .vscode/
+
+# Knowledge Graph
+graphify-out/
