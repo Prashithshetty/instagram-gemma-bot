@@ -14,12 +14,13 @@ def test_doubt_detection():
 
     sub = DummySubagent()
 
-    # Must flag real triggers
-    assert sub.has_doubt("madarchod") is not None
+    # Must flag real security/bot triggers
     assert sub.has_doubt("are you an AI bot?") is not None
     assert sub.has_doubt("who is this?") is not None
+    assert sub.has_doubt("send money urgent") is not None
 
-    # Must NOT flag words with 'ai' inside them like 'kaafi', 'bhai', 'sahi'
+    # Slang and normal curses should NOT trigger doubt on uncensored model
+    assert sub.has_doubt("madarchod bol kya hua") is None
     assert sub.has_doubt("Haan yaar, kaafi sahi chal raha hai.") is None
     assert sub.has_doubt("bhai kaisa hai") is None
     assert sub.has_doubt("Reboot into Cosmic login screen") is None

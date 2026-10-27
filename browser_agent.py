@@ -146,7 +146,7 @@ Task:
         self._update_memory(history)
         active_goal = config.get_active_instruction()
         system_prompt = (
-            f"{config.BASE_PERSONA}\n"
+            f"{config.get_persona_prompt()}\n"
             f"Goal: {active_goal}\n"
             "Continuity: Remember the conversation history below. Never repeat greetings or questions you already asked."
         )

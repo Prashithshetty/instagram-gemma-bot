@@ -15,6 +15,7 @@ Supports automated chatting, context memory, and live interactive supervision fo
 - **Self-Reply & Echo Protection:** Keeps in-memory sent history and geometric checks to ensure the bot never replies to its own messages.
 - **Thread URL Caching:** Discovers Instagram contacts via the Direct inbox and caches direct thread IDs (`/direct/t/<id>/`) locally for instant navigation on subsequent launches.
 - **Rolling Context Memory:** Retains the last 15 conversation exchanges in a rolling sliding window to maintain natural continuity across turns.
+- **Custom Slang & Tone Injection:** Feed real chat examples into `persona_examples.txt` to make the bot talk, curse, and text exactly like you without fine-tuning.
 - **Live Interactive Terminal Panel:** Update instructions on the fly (`[You -> Head Agent] > ...`), switch active contacts (`/target <username>`), or check status (`/status`) without restarting.
 
 ---
@@ -49,10 +50,10 @@ flowchart TD
    ```bash
    google-chrome --remote-debugging-port=9222 &
    ```
-2. **Ollama** installed with `gemma4:12b`:
+2. **Ollama** installed with `satgeze/gemma4-12b-uncensored-1.5m:latest`:
    ```bash
    ollama serve
-   ollama pull gemma4:12b
+   ollama pull satgeze/gemma4-12b-uncensored-1.5m:latest
    ```
 3. **Python 3.10+** with required packages:
    ```bash

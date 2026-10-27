@@ -31,12 +31,20 @@ def verify_models():
     try:
         res = requests.get(f"{config.OLLAMA_URL}/api/tags", timeout=3)
         available = [m.get("name") for m in res.json().get("models", [])]
-        status = "✓ Ready" if config.SUBAGENT_MODEL in available else "! Missing"
-        print(f"  {status} [Single Local Model]: {config.SUBAGENT_MODEL}")
-    except Exception as e:
-        print(f"[Ollama Error] Connection failed: {e}")
-        print("Start Ollama in a terminal with: ollama serve")
-        sys.exit(1)
+        if config.SUBAGENT_MODEL in available:
+            print(f"  ✓ Ready [Model]: {config.SUBAGENT_MODEL}")
+        else:
+            print(f"  ! Missing [Model]: {config.SUBAGENT_MODEL}")
+            print(f"    (To download it, run: ollama pull {config.SUBAGENT_MODEL})")
+            if "gemma4:12b" in available:
+                config.SUBAGENT_MODEL = "gemma4:12b"
+                print(f"  ✓ Falling back to installed model: {config.SUBAGENT_MODEL}")
+            elif available:
+                config.SUBAGENT_MODEL = available[0]
+                print(f"  ✓ Falling back to available model: {config.SUBAGENT_MODEL}")
+            else:
+                print("  ! No models found in Ollama.")
+                sys.exit(1)
 
 
 def browser_worker(platform, target_user, cmd_queue, stop_event):
