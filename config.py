@@ -5,7 +5,6 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
 # Uncensored 12B model for natural slang and unfiltered banter:
 SUBAGENT_MODEL = os.getenv("SUBAGENT_MODEL", "satgeze/gemma4-12b-uncensored-1.5m:latest")
-SUPERVISOR_MODEL = SUBAGENT_MODEL
 
 # Stiff temperature for focused instruction adherence
 TEMPERATURE = 0.2

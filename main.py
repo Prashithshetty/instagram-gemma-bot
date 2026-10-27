@@ -24,6 +24,9 @@ def get_cdp_endpoint():
         sys.exit(1)
     with open(path, "r", encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip()]
+    if len(lines) < 2:
+        print(f"[Error] Chrome DevTools port file is malformed at: {path}")
+        sys.exit(1)
     return f"ws://127.0.0.1:{lines[0]}{lines[1]}"
 
 
@@ -52,7 +55,15 @@ def browser_worker(platform, target_user, cmd_queue, stop_event):
     print(f"\n[CDP] Connecting to Chrome via {cdp_url}...")
 
     with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp(cdp_url)
+        try:
+            browser = p.chromium.connect_over_cdp(cdp_url, timeout=5000)
+        except Exception as e:
+            print(f"\n[CDP Error] Could not connect to Chrome at {cdp_url} (timeout 5s).")
+            print("Ensure Chrome is running with: google-chrome --remote-debugging-port=9222 &")
+            print(f"Details: {e}")
+            stop_event.set()
+            return
+
         subagent = BrowserSubagent(browser.contexts[0])
         subagent.setup_session(platform=platform, target_user=target_user)
 
@@ -126,7 +137,7 @@ def main():
     worker.start()
 
     try:
-        while True:
+        while not stop_event.is_set():
             try:
                 line = input("[You -> Head Agent] > ").strip()
             except (KeyboardInterrupt, EOFError):
